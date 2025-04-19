@@ -1,0 +1,194 @@
+const Project = require('../models/Project');
+const { sendResponse } = require('../utils/responseHandler');
+const { filterProjects } = require('../utils/filter');
+
+// @desc    Get all projects
+// @route   GET /api/projects
+// @access  Public
+const getProjects = async (req, res) => {
+    try {
+        // Apply filters from query parameters
+        const filteredProjects = await filterProjects(req.query);
+
+        return sendResponse(res, 200, 'Projects retrieved successfully', filteredProjects);
+    } catch (error) {
+        console.error(error);
+        return sendResponse(res, 500, 'Server error');
+    }
+};
+
+// @desc    Get single project
+// @route   GET /api/projects/:id
+// @access  Public
+const getProjectById = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id)
+            .populate('organizer_id', 'username email')
+            .populate('assigned_volunteer_id', 'username email');
+
+        if (!project) {
+            return sendResponse(res, 404, 'Project not found');
+        }
+
+        return sendResponse(res, 200, 'Project retrieved successfully', project);
+    } catch (error) {
+        console.error(error);
+        if (error.kind === 'ObjectId') {
+            return sendResponse(res, 404, 'Project not found');
+        }
+        return sendResponse(res, 500, 'Server error');
+    }
+};
+
+// @desc    Create new project
+// @route   POST /api/projects
+// @access  Private (Organizers only)
+const createProject = async (req, res) => {
+    try {
+        const {
+            title,
+            organizer_name,
+            location,
+            description,
+            required_skills,
+            time_commitment,
+            start_date,
+            application_deadline,
+            contact_email,
+            category
+        } = req.body;
+
+        // Validate required fields
+        if (!title || !location || !description || !time_commitment || !start_date || !application_deadline) {
+            return sendResponse(res, 400, 'Please provide all required fields');
+        }
+
+        // Create project
+        const project = await Project.create({
+            title,
+            organizer_name: organizer_name || req.user.username,
+            organizer_id: req.user._id,
+            location,
+            description,
+            required_skills: required_skills || [],
+            time_commitment,
+            start_date,
+            application_deadline,
+            contact_email: contact_email || req.user.email,
+            category
+        });
+
+        return sendResponse(res, 201, 'Project created successfully', project);
+    } catch (error) {
+        console.error(error);
+        return sendResponse(res, 500, 'Server error');
+    }
+};
+
+// @desc    Update project
+// @route   PUT /api/projects/:id
+// @access  Private (Project owner only)
+const updateProject = async (req, res) => {
+    try {
+        let project = await Project.findById(req.params.id);
+
+        if (!project) {
+            return sendResponse(res, 404, 'Project not found');
+        }
+
+        // Check if user is the project owner
+        if (project.organizer_id.toString() !== req.user._id.toString()) {
+            return sendResponse(res, 403, 'Not authorized to update this project');
+        }
+
+        // Update project
+        project = await Project.findByIdAndUpdate(
+            req.params.id,
+            { ...req.body, updated_at: Date.now() },
+            { new: true, runValidators: true }
+        );
+
+        return sendResponse(res, 200, 'Project updated successfully', project);
+    } catch (error) {
+        console.error(error);
+        if (error.kind === 'ObjectId') {
+            return sendResponse(res, 404, 'Project not found');
+        }
+        return sendResponse(res, 500, 'Server error');
+    }
+};
+
+// @desc    Delete project
+// @route   DELETE /api/projects/:id
+// @access  Private (Project owner only)
+const deleteProject = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id);
+
+        if (!project) {
+            return sendResponse(res, 404, 'Project not found');
+        }
+
+        // Check if user is the project owner
+        if (project.organizer_id.toString() !== req.user._id.toString()) {
+            return sendResponse(res, 403, 'Not authorized to delete this project');
+        }
+
+        await project.deleteOne();
+
+        return sendResponse(res, 200, 'Project deleted successfully');
+    } catch (error) {
+        console.error(error);
+        if (error.kind === 'ObjectId') {
+            return sendResponse(res, 404, 'Project not found');
+        }
+        return sendResponse(res, 500, 'Server error');
+    }
+};
+
+// @desc    Assign volunteer to project
+// @route   PUT /api/projects/:id/assign
+// @access  Private (Volunteers only)
+const assignVolunteer = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id);
+
+        if (!project) {
+            return sendResponse(res, 404, 'Project not found');
+        }
+
+        // Check if project is already assigned
+        if (project.status === 'Assigned') {
+            return sendResponse(res, 400, 'Project is already assigned to a volunteer');
+        }
+
+        // Check if user is a volunteer
+        if (req.user.role !== 'volunteer') {
+            return sendResponse(res, 403, 'Only volunteers can be assigned to projects');
+        }
+
+        // Update project status and assign volunteer
+        project.status = 'Assigned';
+        project.assigned_volunteer_id = req.user._id;
+        project.updated_at = Date.now();
+
+        await project.save();
+
+        return sendResponse(res, 200, 'Volunteer assigned to project successfully', project);
+    } catch (error) {
+        console.error(error);
+        if (error.kind === 'ObjectId') {
+            return sendResponse(res, 404, 'Project not found');
+        }
+        return sendResponse(res, 500, 'Server error');
+    }
+};
+
+module.exports = {
+    getProjects,
+    getProjectById,
+    createProject,
+    updateProject,
+    deleteProject,
+    assignVolunteer
+};
