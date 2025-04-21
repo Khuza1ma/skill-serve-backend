@@ -5,8 +5,7 @@ const {
     getProjectById,
     createProject,
     updateProject,
-    deleteProject,
-    assignVolunteer
+    deleteProject
 } = require('../controllers/projectController');
 const { protect, isOrganizer } = require('../middlewares/auth');
 
@@ -18,6 +17,5 @@ router.get('/:id', getProjectById);
 router.post('/', protect, isOrganizer, createProject);
 router.put('/:id', protect, updateProject);
 router.delete('/:id', protect, deleteProject);
-router.put('/:id/assign', protect, assignVolunteer);
 
 module.exports = router;

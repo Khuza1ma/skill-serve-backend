@@ -146,49 +146,12 @@ const deleteProject = async (req, res) => {
     }
 };
 
-// @desc    Assign volunteer to project
-// @route   PUT /api/projects/:id/assign
-// @access  Private (Volunteers only)
-const assignVolunteer = async (req, res) => {
-    try {
-        const project = await Project.findById(req.params.id);
-
-        if (!project) {
-            return sendResponse(res, 404, 'Project not found');
-        }
-
-        // Check if project is already assigned
-        if (project.status === 'Assigned') {
-            return sendResponse(res, 400, 'Project is already assigned to a volunteer');
-        }
-
-        // Check if user is a volunteer
-        if (req.user.role !== 'volunteer') {
-            return sendResponse(res, 403, 'Only volunteers can be assigned to projects');
-        }
-
-        // Update project status and assign volunteer
-        project.status = 'Assigned';
-        project.assigned_volunteer_id = req.user._id;
-        project.updated_at = Date.now();
-
-        await project.save();
-
-        return sendResponse(res, 200, 'Volunteer assigned to project successfully', project);
-    } catch (error) {
-        console.error(error);
-        if (error.kind === 'ObjectId') {
-            return sendResponse(res, 404, 'Project not found');
-        }
-        return sendResponse(res, 500, 'Server error');
-    }
-};
+// Assign volunteer function removed
 
 module.exports = {
     getProjects,
     getProjectById,
     createProject,
     updateProject,
-    deleteProject,
-    assignVolunteer
+    deleteProject
 };

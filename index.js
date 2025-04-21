@@ -19,10 +19,8 @@ app.use(express.urlencoded({ extended: false }));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/volunteer', require('./routes/volunteer'));
 app.use('/api/projects', require('./routes/project'));
 app.use('/api/project-details', require('./routes/projectDetail'));
-app.use('/api/applications', require('./routes/application'));
 
 // Import response handler
 const { sendResponse } = require('./utils/responseHandler');
