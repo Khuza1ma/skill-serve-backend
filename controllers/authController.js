@@ -14,11 +14,18 @@ const login = async (req, res) => {
       return sendResponse(res, 400, 'Please provide username/email and password');
     }
 
-    // Check if user exists with either username or email
+    // Escape special regex characters to prevent injection
+    const escapeRegex = (string) => {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    };
+    
+    const safeUsernameOrEmail = escapeRegex(usernameOrEmail);
+    
+    // Check if user exists with either username or email (case insensitive)
     const user = await User.findOne({
       $or: [
-        { username: usernameOrEmail },
-        { email: usernameOrEmail }
+        { username: { $regex: new RegExp(`^${safeUsernameOrEmail}$`, 'i') } },
+        { email: { $regex: new RegExp(`^${safeUsernameOrEmail}$`, 'i') } }
       ]
     });
     
@@ -118,4 +125,19 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-module.exports = { login, register, getUserProfile };
+// @desc    Logout user
+// @route   POST /api/auth/logout
+// @access  Public
+const logout = async (req, res) => {
+  try {
+    // Since we're using JWT tokens stored on the client side,
+    // the server doesn't need to do anything except tell the client
+    // the logout was successful. The client should remove the token.
+    return sendResponse(res, 200, 'Logged out successfully');
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, 'Server error');
+  }
+};
+
+module.exports = { login, register, getUserProfile, logout };
