@@ -1,5 +1,61 @@
 # Curl Examples for Testing the API
 
+## Projects API
+
+### 1. Create a New Project (Organizer Only)
+
+```bash
+curl -X POST "http://localhost:5000/api/projects" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "title": "Community Garden Project",
+    "organizer_name": "Green Thumb Organization",
+    "location": "Downtown Community Center",
+    "description": "Help us build and maintain a community garden that will provide fresh produce for local food banks.",
+    "required_skills": ["Gardening", "Basic Carpentry", "Organization"],
+    "time_commitment": "5-10 hours per week",
+    "start_date": "2023-06-01",
+    "application_deadline": "2023-05-15",
+    "status": "Open",
+    "category": "Environment",
+    "contact_email": "garden@example.com"
+  }'
+```
+
+### 2. Get All Projects
+
+```bash
+curl -X GET "http://localhost:5000/api/projects" -H "Content-Type: application/json"
+```
+
+### 3. Get a Specific Project
+
+```bash
+curl -X GET "http://localhost:5000/api/projects/60d21b4667d0d8992e610c85" -H "Content-Type: application/json"
+```
+
+### 4. Update a Project (Organizer Only)
+
+```bash
+curl -X PUT "http://localhost:5000/api/projects/60d21b4667d0d8992e610c85" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "title": "Updated Community Garden Project",
+    "description": "Updated description with more details about the project.",
+    "required_skills": ["Gardening", "Basic Carpentry", "Organization", "Communication"]
+  }'
+```
+
+### 5. Delete a Project (Organizer Only)
+
+```bash
+curl -X DELETE "http://localhost:5000/api/projects/60d21b4667d0d8992e610c85" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
 ## Project Details API
 
 ### 1. Get Project Details

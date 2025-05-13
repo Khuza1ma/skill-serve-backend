@@ -1,4 +1,4 @@
-const Project = require('../models/Project');
+cconst Project = require('../models/Project');
 const { sendResponse } = require('../utils/responseHandler');
 const { filterProjects } = require('../utils/filter');
 
@@ -54,6 +54,8 @@ const createProject = async (req, res) => {
             time_commitment,
             start_date,
             application_deadline,
+            status,
+            assigned_volunteer_id,
             contact_email,
             category
         } = req.body;
@@ -63,7 +65,7 @@ const createProject = async (req, res) => {
             return sendResponse(res, 400, 'Please provide all required fields');
         }
 
-        // Create project
+        // Create project with all specified fields
         const project = await Project.create({
             title,
             organizer_name: organizer_name || req.user.username,
@@ -74,8 +76,11 @@ const createProject = async (req, res) => {
             time_commitment,
             start_date,
             application_deadline,
+            status: status || 'Open', // Default to 'Open' if not provided
+            assigned_volunteer_id: assigned_volunteer_id || null, // Default to null if not provided
             contact_email: contact_email || req.user.email,
-            category
+            category,
+            created_at: new Date()
         });
 
         return sendResponse(res, 201, 'Project created successfully', project);
