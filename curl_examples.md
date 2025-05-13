@@ -76,7 +76,48 @@ curl -X PUT "http://localhost:5000/api/project-details/60d21b4667d0d8992e610c85/
 ### 1. Get All Applications for the Logged-in Volunteer
 
 ```bash
-curl -X GET "http://localhost:5000/api/applications" \
+curl -X GET "http://localhost:5000/api/applications/volunteer" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### 2. Get All Applications for a Specific Project (Organizer Only)
+
+```bash
+curl -X GET "http://localhost:5000/api/applications/project/60d21b4667d0d8992e610c85" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### 3. Apply for a Project (Volunteer Only)
+
+```bash
+curl -X POST "http://localhost:5000/api/applications" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "projectId": "60d21b4667d0d8992e610c85",
+    "notes": "I am interested in this project because I have experience in web development.",
+    "skills": ["JavaScript", "React", "Node.js"],
+    "availability": "Weekends and evenings"
+  }'
+```
+
+### 4. Update Application Status (Organizer Only)
+
+```bash
+curl -X PUT "http://localhost:5000/api/applications/60d21b4667d0d8992e610c86" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "status": "accepted"
+  }'
+```
+
+### 5. Withdraw an Application (Volunteer Only)
+
+```bash
+curl -X PUT "http://localhost:5000/api/applications/60d21b4667d0d8992e610c86/withdraw" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```

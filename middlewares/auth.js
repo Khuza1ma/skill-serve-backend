@@ -45,4 +45,13 @@ const isOrganizer = (req, res, next) => {
   }
 };
 
-module.exports = { protect, isOrganizer };
+// Middleware to check if user is a volunteer
+const isVolunteer = (req, res, next) => {
+  if (req.user && req.user.role === 'volunteer') {
+    next();
+  } else {
+    return sendResponse(res, 403, 'Not authorized as a volunteer');
+  }
+};
+
+module.exports = { protect, isOrganizer, isVolunteer };

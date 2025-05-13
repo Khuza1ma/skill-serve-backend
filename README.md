@@ -93,6 +93,12 @@ Skill Serve is a platform where:
 
 ### Applications
 
+- `GET /api/applications/volunteer` - Get all applications for the logged-in volunteer
+- `GET /api/applications/project/:projectId` - Get all applications for a specific project (organizer only)
+- `POST /api/applications` - Apply for a project (volunteer only)
+- `PUT /api/applications/:applicationId` - Update application status (organizer only)
+- `PUT /api/applications/:applicationId/withdraw` - Withdraw an application (volunteer only)
+
 - `GET /api/applications` - Get all applications for the logged-in volunteer
 
 ## Data Models
