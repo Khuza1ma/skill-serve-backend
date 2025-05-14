@@ -22,6 +22,8 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/projects', require('./routes/project'));
 app.use('/api/project-details', require('./routes/projectDetail'));
 app.use('/api/applications', require('./routes/application'));
+app.use('/api/volunteer/dashboard', require('./routes/volunteerDashboard'));
+app.use('/api/organizer/dashboard', require('./routes/organizerDashboard'));
 
 // Import response handler
 const { sendResponse } = require('./utils/responseHandler');

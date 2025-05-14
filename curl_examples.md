@@ -178,6 +178,38 @@ curl -X PUT "http://localhost:5000/api/applications/60d21b4667d0d8992e610c86/wit
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
+## Dashboard APIs
+
+### 1. Get Volunteer Dashboard Data
+
+```bash
+curl -X GET "http://localhost:5000/api/volunteer/dashboard" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+This endpoint returns:
+- User profile information
+- Project status counts (Pending, Approved, Rejected)
+- Total applied projects count
+- List of applied projects with details
+
+### 2. Get Organizer Dashboard Data
+
+```bash
+curl -X GET "http://localhost:5000/api/organizer/dashboard" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+This endpoint returns:
+- Organizer profile information
+- Project status distribution (Open, Closed, Completed)
+- Project statistics (total, active, completed)
+- Recent applications with volunteer details
+- Recent volunteers with their skills
+- Recent projects with status information
+
 ## Notes:
 
 1. Replace `YOUR_JWT_TOKEN` with an actual JWT token obtained from the login endpoint.

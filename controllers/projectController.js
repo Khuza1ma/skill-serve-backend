@@ -1,4 +1,4 @@
-cconst Project = require('../models/Project');
+const Project = require('../models/Project');
 const { sendResponse } = require('../utils/responseHandler');
 const { filterProjects } = require('../utils/filter');
 
