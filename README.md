@@ -95,7 +95,7 @@ Skill Serve is a platform where:
 
 - `GET /api/applications/volunteer` - Get all applications for the logged-in volunteer
 - `GET /api/applications/project/:projectId` - Get all applications for a specific project (organizer only)
-- `POST /api/applications` - Apply for a project (volunteer only)
+- `POST /api/applications/:projectId` - Apply for a project (volunteer only, uses auth token for volunteer ID)
 - `PUT /api/applications/:applicationId` - Update application status (organizer only)
 - `PUT /api/applications/:applicationId/withdraw` - Withdraw an application (volunteer only)
 
@@ -126,7 +126,7 @@ Skill Serve is a platform where:
 - `start_date`: Date (required)
 - `application_deadline`: Date (required)
 - `status`: String (enum: 'Open', 'Assigned', 'Completed', 'Cancelled')
-- `assigned_volunteer_id`: ObjectId (reference to User)
+- `assigned_volunteer_id`: Array of ObjectIds (references to User)
 - `contact_email`: String
 - `category`: String
 - `created_at`: Date

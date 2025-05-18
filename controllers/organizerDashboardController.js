@@ -24,20 +24,15 @@ const getOrganizerDashboard = async (req, res) => {
     // Count projects by status
     const projectStatusCounts = {
       'Open': 0,
+      'Assigned': 0,
+      'Completed': 0,
+      'Cancelled': 0,
       'Closed': 0,
-      'Completed': 0
+      'Total': projects.length
     };
     
     projects.forEach(project => {
-      if (project.status === 'Open') {
-        projectStatusCounts['Open']++;
-      } else if (project.status === 'Assigned') {
-        projectStatusCounts['Closed']++;
-      } else if (project.status === 'Completed') {
-        projectStatusCounts['Completed']++;
-      } else if (project.status === 'Cancelled') {
-        projectStatusCounts['Closed']++;
-      }
+      projectStatusCounts[project.status]++;
     });
     
     // Get total applications for all projects
@@ -109,8 +104,8 @@ const getOrganizerDashboard = async (req, res) => {
       if (recentVolunteers.length >= 5) break; // Limit to 5 recent volunteers
     }
     
-    // Format recent projects
-    const recentProjects = projects.slice(0, 5).map(project => {
+    // Format all projects (not just recent ones)
+    const allProjects = projects.map(project => {
       return {
         id: project._id,
         title: project.title,
@@ -130,11 +125,18 @@ const getOrganizerDashboard = async (req, res) => {
     // Prepare dashboard data
     const dashboardData = {
       project_status_counts: {
+        total_projects: projectStatusCounts['Total'],
         open_projects: projectStatusCounts['Open'],
+        assigned_projects: projectStatusCounts['Assigned'],
+        completed_projects: projectStatusCounts['Completed'],
+        cancelled_projects: projectStatusCounts['Cancelled'],
         closed_projects: projectStatusCounts['Closed'],
-        total_applications: totalApplications
+        total_applications: totalApplications,
+        total_volunteers: uniqueVolunteers.length
       },
-      projects: recentProjects
+      projects: allProjects,
+      recent_applications: formattedApplications,
+      recent_volunteers: recentVolunteers
     };
     
     return sendResponse(res, 200, 'Organizer dashboard data retrieved successfully', dashboardData);

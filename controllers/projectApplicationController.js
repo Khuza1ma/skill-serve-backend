@@ -10,7 +10,15 @@ const getVolunteerApplications = async (req, res) => {
   try {
     const volunteerId = req.user._id;
 
-    // Find all applications by the volunteer
+    // Get pagination parameters from query
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Get total count for pagination
+    const totalApplications = await ProjectApplication.countDocuments({ volunteerId });
+
+    // Find all applications by the volunteer with pagination
     const applications = await ProjectApplication.find({ volunteerId })
       .populate({
         path: 'projectId',
@@ -20,8 +28,85 @@ const getVolunteerApplications = async (req, res) => {
           select: 'username email'
         }
       })
-      .sort({ dateApplied: -1 });
+      .select('-skills') // Exclude skills field
+      .sort({ dateApplied: -1 })
+      .skip(skip)
+      .limit(limit);
 
+    // Format the applications with additional information
+    const formattedApplications = applications.map(application => {
+      const appObj = application.toObject();
+      
+      // Format dates for better readability
+      appObj.dateApplied = application.dateApplied.toISOString().split('T')[0];
+      
+      if (application.projectId) {
+        // Flatten organizer details
+        const { organizer_id, ...projectDetails } = appObj.projectId;
+        appObj.projectId = {
+          ...projectDetails,
+          organizer_id: organizer_id._id,
+          organizer_name: organizer_id.username,
+          contact_email: organizer_id.email
+        };
+
+        // Format dates
+        appObj.projectId.start_date = application.projectId.start_date.toISOString().split('T')[0];
+        appObj.projectId.application_deadline = application.projectId.application_deadline.toISOString().split('T')[0];
+      }
+      
+      return appObj;
+    });
+
+    // Prepare response with pagination metadata
+    const response = {
+      applications: formattedApplications,
+      pagination: {
+        total: totalApplications,
+        page: page,
+        limit: limit,
+        pages: Math.ceil(totalApplications / limit)
+      }
+    };
+
+    return sendResponse(res, 200, 'Volunteer applications retrieved successfully', response);
+  } catch (error) {
+    console.error(error);
+    return sendResponse(res, 500, 'Server error');
+  }
+};
+
+// @desc    Get all applications for organizer's projects
+// @route   GET /api/applications/organizer/applications
+// @access  Private (Organizer only)
+const getProjectApplications = async (req, res) => {
+  try {
+    const organizerId = req.user._id;
+    
+    // First, get all projects owned by this organizer
+    const organizerProjects = await Project.find({ organizer_id: organizerId });
+    
+    if (!organizerProjects.length) {
+      return sendResponse(res, 200, 'No projects found for this organizer', []);
+    }
+    
+    // Get project IDs
+    const projectIds = organizerProjects.map(project => project._id);
+    
+    // Find all applications for all projects
+    const applications = await ProjectApplication.find({ 
+      projectId: { $in: projectIds } 
+    })
+    .populate({
+      path: 'volunteerId',
+      select: 'username email'
+    })
+    .populate({
+      path: 'projectId',
+      select: 'title location description required_skills start_date application_deadline status'
+    })
+    .sort({ dateApplied: -1 });
+    
     // Format the applications with additional information
     const formattedApplications = applications.map(application => {
       const appObj = application.toObject();
@@ -33,70 +118,60 @@ const getVolunteerApplications = async (req, res) => {
         appObj.projectId.start_date = application.projectId.start_date.toISOString().split('T')[0];
         appObj.projectId.application_deadline = application.projectId.application_deadline.toISOString().split('T')[0];
       }
-      
-      return appObj;
+
+      // Create a more frontend-friendly structure
+      return {
+        applicationId: appObj._id,
+        projectId: appObj.projectId._id,
+        projectTitle: appObj.projectId.title,
+        projectLocation: appObj.projectId.location,
+        projectStatus: appObj.projectId.status,
+        volunteer: {
+          id: appObj.volunteerId._id,
+          username: appObj.volunteerId.username,
+          email: appObj.volunteerId.email
+        },
+        applicationStatus: appObj.status,
+        dateApplied: appObj.dateApplied,
+        projectStartDate: appObj.projectId.start_date,
+        applicationDeadline: appObj.projectId.application_deadline,
+        requiredSkills: appObj.projectId.required_skills || []
+      };
     });
 
-    return sendResponse(res, 200, 'Volunteer applications retrieved successfully', formattedApplications);
+    // Group applications by project
+    const applicationsByProject = formattedApplications.reduce((acc, app) => {
+      if (!acc[app.projectId]) {
+        acc[app.projectId] = {
+          projectId: app.projectId,
+          projectTitle: app.projectTitle,
+          projectLocation: app.projectLocation,
+          projectStatus: app.projectStatus,
+          applications: []
+        };
+      }
+      acc[app.projectId].applications.push({
+        applicationId: app.applicationId,
+        volunteer: app.volunteer,
+        status: app.applicationStatus,
+        dateApplied: app.dateApplied
+      });
+      return acc;
+    }, {});
+    
+    return sendResponse(res, 200, 'Applications retrieved successfully', Object.values(applicationsByProject));
   } catch (error) {
     console.error(error);
-    return sendResponse(res, 500, 'Server error');
-  }
-};
-
-// @desc    Get all applications for a project
-// @route   GET /api/applications/project/:projectId
-// @access  Private (Organizer only)
-const getProjectApplications = async (req, res) => {
-  try {
-    const { projectId } = req.params;
-    
-    // Verify the project exists and belongs to the organizer
-    const project = await Project.findById(projectId);
-    
-    if (!project) {
-      return sendResponse(res, 404, 'Project not found');
-    }
-    
-    // Check if the user is the organizer of this project
-    if (project.organizer_id.toString() !== req.user._id.toString()) {
-      return sendResponse(res, 403, 'You are not authorized to view applications for this project');
-    }
-    
-    // Find all applications for the project
-    const applications = await ProjectApplication.find({ projectId })
-      .populate({
-        path: 'volunteerId',
-        select: 'username email'
-      })
-      .sort({ dateApplied: -1 });
-    
-    // Format the applications with additional information
-    const formattedApplications = applications.map(application => {
-      const appObj = application.toObject();
-      
-      // Format dates for better readability
-      appObj.dateApplied = application.dateApplied.toISOString().split('T')[0];
-      
-      return appObj;
-    });
-    
-    return sendResponse(res, 200, 'Project applications retrieved successfully', formattedApplications);
-  } catch (error) {
-    console.error(error);
-    if (error.kind === 'ObjectId') {
-      return sendResponse(res, 404, 'Project not found');
-    }
     return sendResponse(res, 500, 'Server error');
   }
 };
 
 // @desc    Apply for a project
-// @route   POST /api/applications
+// @route   POST /api/applications/:projectId
 // @access  Private (Volunteer only)
 const applyForProject = async (req, res) => {
   try {
-    const { projectId, notes, skills, availability } = req.body;
+    const projectId = req.params.projectId;
     const volunteerId = req.user._id;
     
     // Check if the user is a volunteer
@@ -116,30 +191,72 @@ const applyForProject = async (req, res) => {
       return sendResponse(res, 400, 'This project is no longer accepting applications');
     }
     
-    // Check if the project has reached its maximum number of volunteers
-    if (project.assigned_volunteer_id && project.assigned_volunteer_id.length >= project.max_volunteers) {
-      return sendResponse(res, 400, 'This project has reached its maximum number of volunteers');
+    // Improved validation for max volunteers
+    const currentVolunteers = project.assigned_volunteer_id || [];
+    const maxVolunteers = project.max_volunteers || 1;
+
+    // Check if project has reached max volunteers
+    if (currentVolunteers.length >= maxVolunteers) {
+      return sendResponse(res, 400, `This project has reached its maximum number of volunteers (${maxVolunteers})`);
+    }
+
+    // Check if volunteer is already assigned to this project
+    if (currentVolunteers.some(id => id.toString() === volunteerId.toString())) {
+      return sendResponse(res, 400, 'You are already assigned to this project');
     }
     
     // Check if the volunteer has already applied for this project
-    const existingApplication = await ProjectApplication.findOne({ volunteerId, projectId });
+    const existingApplication = await ProjectApplication.findOne({ 
+      volunteerId, 
+      projectId,
+      status: { $in: ['pending', 'accepted'] } // Check for active applications
+    });
     
     if (existingApplication) {
       return sendResponse(res, 400, 'You have already applied for this project');
+    }
+
+    // Get count of pending and accepted applications
+    const activeApplicationsCount = await ProjectApplication.countDocuments({
+      projectId,
+      status: { $in: ['pending', 'accepted'] }
+    });
+
+    // Check if accepting more applications would exceed max volunteers
+    if (activeApplicationsCount >= maxVolunteers) {
+      return sendResponse(res, 400, `Cannot accept more applications. Project has reached maximum capacity of ${maxVolunteers} volunteer(s)`);
     }
     
     // Create a new application
     const application = await ProjectApplication.create({
       volunteerId,
-      projectId,
-      notes,
-      skills,
-      availability
+      projectId
     });
+
+    // First ensure the array exists and then add the volunteer ID
+    await Project.updateOne(
+      { _id: projectId },
+      [
+        {
+          $set: {
+            assigned_volunteer_id: {
+              $cond: {
+                if: { $eq: ["$assigned_volunteer_id", null] },
+                then: [volunteerId],
+                else: { $concatArrays: ["$assigned_volunteer_id", [volunteerId]] }
+              }
+            }
+          }
+        }
+      ]
+    );
     
     return sendResponse(res, 201, 'Application submitted successfully', application);
   } catch (error) {
     console.error(error);
+    if (error.kind === 'ObjectId') {
+      return sendResponse(res, 404, 'Invalid project ID format');
+    }
     if (error.code === 11000) {
       return sendResponse(res, 400, 'You have already applied for this project');
     }

@@ -10,6 +10,11 @@ const getVolunteerDashboard = async (req, res) => {
   try {
     const volunteerId = req.user._id;
     
+    // Get pagination parameters from query
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
     // Get user profile information
     const user = await User.findById(volunteerId).select('-password');
     
@@ -17,67 +22,56 @@ const getVolunteerDashboard = async (req, res) => {
       return sendResponse(res, 404, 'User not found');
     }
     
-    // Find all applications by the volunteer
+    // Get total count for pagination
+    const totalApplications = await ProjectApplication.countDocuments({ volunteerId });
+    
+    // Find all applications by the volunteer with pagination
     const applications = await ProjectApplication.find({ volunteerId })
       .populate({
         path: 'projectId',
-        select: 'title location description required_skills start_date application_deadline status organizer_id',
+        select: 'title location description required_skills start_date application_deadline status',
         populate: {
           path: 'organizer_id',
           select: 'username email'
         }
       })
-      .sort({ dateApplied: -1 });
-    
-    // Format the applications with additional information
-    const formattedApplications = applications.map(application => {
-      const appObj = application.toObject();
-      
-      // Format dates for better readability
-      appObj.dateApplied = application.dateApplied.toISOString().split('T')[0];
-      
-      if (application.projectId) {
-        appObj.projectId.start_date = application.projectId.start_date.toISOString().split('T')[0];
-        appObj.projectId.application_deadline = application.projectId.application_deadline.toISOString().split('T')[0];
-      }
-      
-      // Map database status to frontend status
-      let status = appObj.status.charAt(0).toUpperCase() + appObj.status.slice(1); // Capitalize first letter
-      if (status === 'Accepted') {
-        status = 'Approved';
-      }
-      
+      .select('-skills')
+      .sort({ dateApplied: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Format applications to flatten organizer details
+    const formattedApplications = applications.map(app => {
+      const appObj = app.toObject();
+      const { organizer_id, ...projectDetails } = appObj.projectId;
       return {
-        id: appObj._id,
-        project_id: appObj.projectId._id,
-        project_title: appObj.projectId.title,
-        project_location: appObj.projectId.location,
-        organizer_name: appObj.projectId.organizer_id.username,
-        organizer_email: appObj.projectId.organizer_id.email,
-        date_applied: appObj.dateApplied,
-        status: status,
-        start_date: appObj.projectId.start_date,
-        application_deadline: appObj.projectId.application_deadline,
-        skills: appObj.skills || [],
-        notes: appObj.notes || ''
+        ...appObj,
+        projectId: {
+          ...projectDetails,
+          organizer_id: organizer_id._id,
+          organizer_name: organizer_id.username,
+          contact_email: organizer_id.email
+        }
       };
     });
     
-    // Count applications by status
+    // Count all applications by status (not just the paginated ones)
+    const allApplications = await ProjectApplication.find({ volunteerId });
     const statusCounts = {
-      'Pending': 0,
-      'Approved': 0,
-      'Rejected': 0
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      total_applied_projects: totalApplications
     };
     
-    applications.forEach(app => {
-      const status = app.status.charAt(0).toUpperCase() + app.status.slice(1);
-      if (status === 'Accepted') {
-        statusCounts['Approved']++;
-      } else if (status === 'Pending') {
-        statusCounts['Pending']++;
-      } else if (status === 'Rejected') {
-        statusCounts['Rejected']++;
+    allApplications.forEach(app => {
+      let status = app.status.toLowerCase();
+      if (status === 'accepted') {
+        statusCounts['approved']++;
+      } else if (status === 'pending') {
+        statusCounts['pending']++;
+      } else if (status === 'rejected') {
+        statusCounts['rejected']++;
       }
     });
     
@@ -92,13 +86,16 @@ const getVolunteerDashboard = async (req, res) => {
       status: 'Assigned'
     });
     
-    // Prepare dashboard data
+    // Prepare dashboard data with pagination
     const dashboardData = {
-      project_status_counts: {
-        ...statusCounts,
-        total_applied_projects: applications.length
-      },
-      applied_projects: formattedApplications
+      project_status_counts: statusCounts,
+      applied_projects: formattedApplications,
+      pagination: {
+        total: totalApplications,
+        page: page,
+        limit: limit,
+        pages: Math.ceil(totalApplications / limit)
+      }
     };
     
     return sendResponse(res, 200, 'Volunteer dashboard data retrieved successfully', dashboardData);

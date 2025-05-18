@@ -13,7 +13,8 @@ const projectSchema = new mongoose.Schema({
   organizer_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'Organizer ID is required']
+    required: [true, 'Organizer ID is required'],
+    validateBeforeUpdate: false
   },
   location: {
     type: String,
@@ -50,10 +51,11 @@ const projectSchema = new mongoose.Schema({
     enum: ['Open', 'Assigned', 'Completed', 'Cancelled', 'Closed'],
     default: 'Open'
   },
-  assigned_volunteer_id: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
+  assigned_volunteer_id: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'User',
+    default: []
+  },
   contact_email: {
     type: String,
     trim: true,

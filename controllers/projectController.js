@@ -7,8 +7,8 @@ const { filterProjects } = require('../utils/filter');
 // @access  Public
 const getProjects = async (req, res) => {
     try {
-        // Apply filters from query parameters
-        const filteredProjects = await filterProjects(req.query);
+        // Apply filters from query parameters but don't populate volunteer details
+        const filteredProjects = await filterProjects(req.query, false); // passing false to indicate no population needed
 
         return sendResponse(res, 200, 'Projects retrieved successfully', filteredProjects);
     } catch (error) {
@@ -23,7 +23,7 @@ const getProjects = async (req, res) => {
 const getProjectById = async (req, res) => {
     try {
         const project = await Project.findById(req.params.id)
-            .populate('assigned_volunteer_id', 'username email');
+            .select('+assigned_volunteer_id'); // Only select the IDs, don't populate
 
         if (!project) {
             return sendResponse(res, 404, 'Project not found');
@@ -79,7 +79,7 @@ const createProject = async (req, res) => {
             end_date,
             application_deadline,
             status: status || 'Open', // Default to 'Open' if not provided
-            assigned_volunteer_id: assigned_volunteer_id || null, // Default to null if not provided
+            assigned_volunteer_id: assigned_volunteer_id || [], // Default to empty array if not provided
             contact_email: contact_email || req.user.email,
             category,
             max_volunteers: max_volunteers || 1,
@@ -112,7 +112,13 @@ const updateProject = async (req, res) => {
         // Update project
         project = await Project.findByIdAndUpdate(
             req.params.id,
-            { ...req.body, updated_at: Date.now() },
+            { 
+                ...req.body, 
+                organizer_id: project.organizer_id, // Preserve the original organizer_id
+                contact_email: req.body.contact_email || req.user.email,
+                created_at: project.created_at, // Preserve the original creation date
+                updated_at: Date.now() 
+            },
             { new: true, runValidators: true }
         );
 

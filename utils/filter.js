@@ -3,9 +3,10 @@ const Project = require('../models/Project');
 /**
  * Filter projects based on query parameters
  * @param {Object} queryParams - Query parameters from request
+ * @param {Boolean} populateVolunteers - Whether to populate volunteer details
  * @returns {Array} - Filtered projects
  */
-const filterProjects = async (queryParams) => {
+const filterProjects = async (queryParams, populateVolunteers = false) => {
     try {
         const {
             status,
@@ -17,52 +18,58 @@ const filterProjects = async (queryParams) => {
             search,
             sort,
             limit = 10,
-            page = 1
+            page = 1,
+            organizer_id
         } = queryParams;
 
         // Build query
-        const query = {};
+        let query = Project.find();
 
         // Filter by status
         if (status) {
-            query.status = status;
+            query = query.where('status').equals(status);
         }
 
         // Filter by location
         if (location) {
-            query.location = { $regex: location, $options: 'i' };
+            query = query.where('location').regex(new RegExp(location, 'i'));
         }
 
         // Filter by category
         if (category) {
-            query.category = { $regex: category, $options: 'i' };
+            query = query.where('category').regex(new RegExp(category, 'i'));
         }
 
         // Filter by required skills
         if (skills) {
             const skillsArray = skills.split(',').map(skill => skill.trim());
-            query.required_skills = { $in: skillsArray };
+            query = query.where('required_skills').in(skillsArray);
+        }
+
+        // Filter by organizer
+        if (organizer_id) {
+            query = query.where('organizer_id').equals(organizer_id);
         }
 
         // Filter by date range
         if (startDate || endDate) {
-            query.start_date = {};
+            query = query.where('start_date');
 
             if (startDate) {
-                query.start_date.$gte = new Date(startDate);
+                query = query.gte(new Date(startDate));
             }
 
             if (endDate) {
-                query.start_date.$lte = new Date(endDate);
+                query = query.lte(new Date(endDate));
             }
         }
 
         // Search in title and description
         if (search) {
-            query.$or = [
+            query = query.or([
                 { title: { $regex: search, $options: 'i' } },
                 { description: { $regex: search, $options: 'i' } }
-            ];
+            ]);
         }
 
         // Calculate pagination
@@ -77,17 +84,20 @@ const filterProjects = async (queryParams) => {
         }
 
         // Execute query with pagination
-        const projects = await Project.find(query)
-            .sort(sortOptions)
+        query = query.sort(sortOptions)
             .limit(parseInt(limit))
-            .skip(skip)
-            .populate('assigned_volunteer_id', 'username email');
+            .skip(skip);
+
+        // Only populate if specifically requested
+        if (populateVolunteers) {
+            query = query.populate('assigned_volunteer_id', 'username email');
+        }
 
         // Get total count for pagination
-        const total = await Project.countDocuments(query);
+        const total = await Project.countDocuments(query.getQuery());
 
         return {
-            projects,
+            projects: await query.exec(),
             pagination: {
                 total,
                 page: parseInt(page),
