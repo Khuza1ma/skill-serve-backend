@@ -38,20 +38,22 @@ const projectSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'Start date is required']
   },
+  end_date: {
+    type: Date
+  },
   application_deadline: {
     type: Date,
     required: [true, 'Application deadline is required']
   },
   status: {
     type: String,
-    enum: ['Open', 'Assigned', 'Completed', 'Cancelled'],
+    enum: ['Open', 'Assigned', 'Completed', 'Cancelled', 'Closed'],
     default: 'Open'
   },
-  assigned_volunteer_id: {
+  assigned_volunteer_id: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null
-  },
+    ref: 'User'
+  }],
   contact_email: {
     type: String,
     trim: true,
@@ -63,6 +65,10 @@ const projectSchema = new mongoose.Schema({
   category: {
     type: String,
     trim: true
+  },
+  max_volunteers: {
+    type: Number,
+    default: 1
   },
   created_at: {
     type: Date,

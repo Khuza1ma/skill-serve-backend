@@ -29,7 +29,6 @@ const getAllProjectDetails = async (req, res) => {
 
     // Find projects based on query
     let query = Project.find(JSON.parse(queryStr))
-      .populate('organizer_id', 'username email')
       .populate('assigned_volunteer_id', 'username email');
 
     // Sorting
@@ -106,7 +105,6 @@ const getAllProjectDetails = async (req, res) => {
 const getProjectDetails = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
-      .populate('organizer_id', 'username email')
       .populate('assigned_volunteer_id', 'username email');
 
     if (!project) {

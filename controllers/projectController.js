@@ -23,7 +23,6 @@ const getProjects = async (req, res) => {
 const getProjectById = async (req, res) => {
     try {
         const project = await Project.findById(req.params.id)
-            .populate('organizer_id', 'username email')
             .populate('assigned_volunteer_id', 'username email');
 
         if (!project) {
@@ -53,11 +52,13 @@ const createProject = async (req, res) => {
             required_skills,
             time_commitment,
             start_date,
+            end_date,
             application_deadline,
             status,
             assigned_volunteer_id,
             contact_email,
-            category
+            category,
+            max_volunteers
         } = req.body;
 
         // Validate required fields
@@ -75,11 +76,13 @@ const createProject = async (req, res) => {
             required_skills: required_skills || [],
             time_commitment,
             start_date,
+            end_date,
             application_deadline,
             status: status || 'Open', // Default to 'Open' if not provided
             assigned_volunteer_id: assigned_volunteer_id || null, // Default to null if not provided
             contact_email: contact_email || req.user.email,
             category,
+            max_volunteers: max_volunteers || 1,
             created_at: new Date()
         });
 

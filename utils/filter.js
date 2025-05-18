@@ -81,7 +81,6 @@ const filterProjects = async (queryParams) => {
             .sort(sortOptions)
             .limit(parseInt(limit))
             .skip(skip)
-            .populate('organizer_id', 'username email')
             .populate('assigned_volunteer_id', 'username email');
 
         // Get total count for pagination
@@ -114,8 +113,7 @@ const getAvailableProjects = async () => {
             status: 'Open',
             application_deadline: { $gt: currentDate }
         })
-            .sort({ application_deadline: 1 })
-            .populate('organizer_id', 'username email');
+            .sort({ application_deadline: 1 });
     } catch (error) {
         console.error('Error getting available projects:', error);
         throw error;
@@ -140,8 +138,7 @@ const getProjectsEndingSoon = async (days = 7) => {
                 $lt: futureDate
             }
         })
-            .sort({ application_deadline: 1 })
-            .populate('organizer_id', 'username email');
+            .sort({ application_deadline: 1 });
     } catch (error) {
         console.error('Error getting projects ending soon:', error);
         throw error;

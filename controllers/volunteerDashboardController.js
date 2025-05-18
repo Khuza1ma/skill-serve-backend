@@ -49,15 +49,15 @@ const getVolunteerDashboard = async (req, res) => {
       
       return {
         id: appObj._id,
-        projectId: appObj.projectId._id,
-        projectTitle: appObj.projectId.title,
-        projectLocation: appObj.projectId.location,
-        organizerName: appObj.projectId.organizer_id.username,
-        organizerEmail: appObj.projectId.organizer_id.email,
-        dateApplied: appObj.dateApplied,
+        project_id: appObj.projectId._id,
+        project_title: appObj.projectId.title,
+        project_location: appObj.projectId.location,
+        organizer_name: appObj.projectId.organizer_id.username,
+        organizer_email: appObj.projectId.organizer_id.email,
+        date_applied: appObj.dateApplied,
         status: status,
-        startDate: appObj.projectId.start_date,
-        applicationDeadline: appObj.projectId.application_deadline,
+        start_date: appObj.projectId.start_date,
+        application_deadline: appObj.projectId.application_deadline,
         skills: appObj.skills || [],
         notes: appObj.notes || ''
       };
@@ -94,17 +94,11 @@ const getVolunteerDashboard = async (req, res) => {
     
     // Prepare dashboard data
     const dashboardData = {
-      userProfile: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        completedProjects,
-        ongoingProjects
+      project_status_counts: {
+        ...statusCounts,
+        total_applied_projects: applications.length
       },
-      projectStatusCounts: statusCounts,
-      totalAppliedProjects: applications.length,
-      appliedProjects: formattedApplications
+      applied_projects: formattedApplications
     };
     
     return sendResponse(res, 200, 'Volunteer dashboard data retrieved successfully', dashboardData);

@@ -116,6 +116,11 @@ const applyForProject = async (req, res) => {
       return sendResponse(res, 400, 'This project is no longer accepting applications');
     }
     
+    // Check if the project has reached its maximum number of volunteers
+    if (project.assigned_volunteer_id && project.assigned_volunteer_id.length >= project.max_volunteers) {
+      return sendResponse(res, 400, 'This project has reached its maximum number of volunteers');
+    }
+    
     // Check if the volunteer has already applied for this project
     const existingApplication = await ProjectApplication.findOne({ volunteerId, projectId });
     
@@ -174,21 +179,35 @@ const updateApplicationStatus = async (req, res) => {
     
     // If the application is accepted, update the project status and assigned volunteer
     if (status === 'accepted') {
-      // Update the project
-      await Project.findByIdAndUpdate(application.projectId._id, {
-        status: 'Assigned',
-        assigned_volunteer_id: application.volunteerId
-      });
+      // Get the current project to check volunteer count
+      const project = await Project.findById(application.projectId._id);
       
-      // Reject all other pending applications for this project
-      await ProjectApplication.updateMany(
+      // Check if the project has reached its maximum number of volunteers
+      if (project.assigned_volunteer_id && project.assigned_volunteer_id.length >= project.max_volunteers) {
+        return sendResponse(res, 400, 'This project has reached its maximum number of volunteers');
+      }
+      
+      // Update the project by adding the volunteer to the assigned_volunteer_id array
+      await Project.findByIdAndUpdate(
+        application.projectId._id, 
         { 
-          projectId: application.projectId._id, 
-          _id: { $ne: applicationId },
-          status: 'pending'
-        },
-        { status: 'rejected' }
+          status: 'Assigned',
+          $addToSet: { assigned_volunteer_id: application.volunteerId } 
+        }
       );
+      
+      // If we've reached max volunteers after this addition, reject all other pending applications
+      const updatedProject = await Project.findById(application.projectId._id);
+      if (updatedProject.assigned_volunteer_id.length >= updatedProject.max_volunteers) {
+        await ProjectApplication.updateMany(
+          { 
+            projectId: application.projectId._id, 
+            _id: { $ne: applicationId },
+            status: 'pending'
+          },
+          { status: 'rejected' }
+        );
+      }
     }
     
     return sendResponse(res, 200, 'Application status updated successfully', application);

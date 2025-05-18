@@ -70,12 +70,12 @@ const getOrganizerDashboard = async (req, res) => {
       
       return {
         id: app._id,
-        projectId: app.projectId._id,
-        projectTitle: app.projectId.title,
-        volunteerName: app.volunteerId.username,
-        volunteerEmail: app.volunteerId.email,
+        project_id: app.projectId._id,
+        project_title: app.projectId.title,
+        volunteer_name: app.volunteerId.username,
+        volunteer_email: app.volunteerId.email,
         status: status,
-        appliedDate: app.dateApplied.toISOString().split('T')[0],
+        applied_date: app.dateApplied.toISOString().split('T')[0],
         skills: app.skills || []
       };
     });
@@ -116,9 +116,9 @@ const getOrganizerDashboard = async (req, res) => {
         title: project.title,
         location: project.location,
         status: project.status,
-        startDate: project.start_date.toISOString().split('T')[0],
-        applicationDeadline: project.application_deadline.toISOString().split('T')[0],
-        requiredSkills: project.required_skills || []
+        start_date: project.start_date.toISOString().split('T')[0],
+        application_deadline: project.application_deadline.toISOString().split('T')[0],
+        required_skills: project.required_skills || []
       };
     });
     
@@ -129,21 +129,11 @@ const getOrganizerDashboard = async (req, res) => {
     
     // Prepare dashboard data
     const dashboardData = {
-      organizerProfile: {
-        organizerId: organizer._id,
-        name: organizer.username,
-        email: organizer.email,
-        totalProjects: projects.length,
-        activeProjects: projectStatusCounts['Open'],
-        completedProjects: projectStatusCounts['Completed'],
-        totalVolunteers: uniqueVolunteers.length
+      project_status_counts: {
+        open_projects: projectStatusCounts['Open'],
+        closed_projects: projectStatusCounts['Closed'],
+        total_applications: totalApplications
       },
-      projectStatusCounts,
-      openProjects: projectStatusCounts['Open'],
-      closedProjects: projectStatusCounts['Closed'],
-      totalApplications,
-      recentApplications: formattedApplications,
-      recentVolunteers,
       projects: recentProjects
     };
     

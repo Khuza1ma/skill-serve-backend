@@ -1,4 +1,4 @@
-adconst express = require('express');
+const express = require('express');
 const router = express.Router();
 const { getOrganizerDashboard } = require('../controllers/organizerDashboardController');
 const { protect, isOrganizer } = require('../middlewares/auth');
